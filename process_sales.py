@@ -23,7 +23,7 @@ def preprocess_operations(df):
     df = df[~df['id заказа'].str.contains('Итог', na=False)]
     # убрать первый пробел и сделать строчными фио
     df['ФИО Клиента'] = df['ФИО Клиента'].str.lower()
-    df['ФИО Клиента'] = df['ФИО Клиента'].str.replace(r'^ ', '', regex=True)
+    df['ФИО Клиента'] = df['ФИО Клиента'].str.lstrip()
     # убрать лишние столбцы
     df = df[['ФИО Клиента', 'id заказа', 'Линза', 'Дата заказа', 'Дата доплаты',
              'Кол-во', 'Сумма платежа', 'Сумма доплаты']]
@@ -45,6 +45,11 @@ def fill_empty(df):
     df = fill_empty_rows(df, 'id заказа')
     df = fill_empty_rows(df, 'Линза')
     df['id заказа'] = df['id заказа'].astype(int)
+    return df
+
+
+def select_patients(df, patients):
+    df = df[df['ФИО Клиента'].isin(patients)]
     return df
 
 
@@ -132,22 +137,25 @@ def count_prize(df):
     return df
 
 
-def mark_prizes_all_patients(lens_group):
+def mark_prizes_all_patients(lens_group, patients):
     input_file_name = lens_group + '.xls'
     operations = read_operations(input_file_name)
     preprocessed_operations = preprocess_operations(operations)
     df_filled_rows = fill_empty(preprocessed_operations)
+    df_filled_rows = select_patients(df_filled_rows, patients)
     if type == 'МФКЛ':
         df_filled_rows = use_mfkl_handbook(
             'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
             df_filled_rows)
-    df_lens_types = add_lens_type(df_filled_rows)
-    df_balls = count_balls(df_lens_types)
+    df_filled_rows = add_lens_type(df_filled_rows)
+    df_balls = count_balls(df_filled_rows)
     df_prizes = count_prize(df_balls)
     preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
                                        on='ФИО Клиента', how='left')
     output_file_name = lens_group + '_output.xlsx'
     preprocessed_operations.to_excel(output_file_name, index=False)
+    return df_prizes
+
 
 
 # совместить с рецептами

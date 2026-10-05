@@ -1,5 +1,6 @@
 import argparse
 from read_recepy import *
+from process_sales import *
 
 
 def parse_args():
@@ -14,9 +15,15 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    recipes_tkl = prepare_recipes(tab='ТКЛ-рецепты',
+    recipes_tkl = prepare_recipes(tab='ТКЛ-рецепты оплаченые',
                                   date_str=parse_args().dates)
-    recipes_mfkl = prepare_recipes(tab='МФКЛ-рецепты',
-                                   date_str=parse_args().dates)
     print(recipes_tkl[['ФИО Клиента', 'Дата рецепта']].head())
+    prizes_tkl = mark_prizes_all_patients(lens_group='ТКЛ',
+                                          patients=recipes_tkl['ФИО Клиента'])
+
+
+    recipes_mfkl = prepare_recipes(tab='МФКЛ-рецепты оплаченые',
+                                   date_str=parse_args().dates)
+    prizes_mfkl = mark_prizes_all_patients(lens_group='МФКЛ',
+                                          patients=recipes_mfkl['ФИО Клиента'])
     print(recipes_mfkl[['ФИО Клиента', 'Дата рецепта']].head())

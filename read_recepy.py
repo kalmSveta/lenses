@@ -17,6 +17,8 @@ def get_date_range(date_str: str):
 
 
 def prepare_recipes(tab: str, date_str: str):
+    # tab = 'ТКЛ-рецепты оплаченые'
+    # tab = 'МФКЛ-рецепты оплаченые'
     recipes = pd.read_excel('РЕЦЕПТЫ.xlsx', sheet_name=tab)
     # присвоим уникальный id каждой строке
     recipes['row_id'] = range(len(recipes))
@@ -27,9 +29,7 @@ def prepare_recipes(tab: str, date_str: str):
                           (recipes['Дата рецепта'] <= end_date)]
     # сделаем все ФИО прописными и уберем первый пробел
     recipes['ФИО Клиента'] = recipes['ФИО Клиента'].str.lower()
-    recipes['ФИО Клиента'] = recipes['ФИО Клиента'].str.replace(r'^ ', '',
-                                                                regex=True)
+    recipes['ФИО Клиента'] = recipes['ФИО Клиента'].str.lstrip()
     recipes['Сотрудник'] = recipes['Сотрудник'].str.lower()
-    recipes['Сотрудник'] = recipes['Сотрудник'].str.replace(r'^ ', '',
-                                                            regex=True)
+    recipes['Сотрудник'] = recipes['Сотрудник'].str.lstrip()
     return recipes
