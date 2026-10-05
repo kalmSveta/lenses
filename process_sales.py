@@ -48,7 +48,7 @@ def fill_empty(df):
     return df
 
 
-def lens_type(df):
+def add_lens_type(df):
     conditions = [
         df['Линза'].str.contains('30', na=False),
         df['Линза'].str.contains('3', na=False),
@@ -132,58 +132,24 @@ def count_prize(df):
     return df
 
 
-#
-# def mark_prizes_all_patients_mfkl():
-#     operations = read_operations('МФКЛ.xls')
-#     preprocessed_operations = preprocess_operations(operations)
-#     preprocessed_operations['Приз'] = None
-#     patients = preprocessed_operations['ФИО Клиента'].dropna().unique()
-#     for patient in patients[:1]:
-#         print(patient)
-#         operations_for_patient = select_patient(preprocessed_operations, patient)
-#         operations_for_patient = use_mfkl_handbook(
-#             'Справочник по контактным линзам.xlsx','Справочник по МФКЛ',
-#             operations_for_patient)
-    #     sales_without_returns = count_sales_without_returns(
-    #         count_sales(operations_for_patient),
-    #         count_returns(operations_for_patient),
-    #     )
-    #     prize = check_prize_by_sales(sales_without_returns)
-    #     if prize == 0:
-    #         prize = check_prize_by_boxes(operations_for_patient)
-    #     if prize == 0:
-    #         preprocessed_operations.loc[preprocessed_operations['ФИО Клиента'] ==
-    #                                     patient, 'Приз'] = 'Нет'
-    #     elif prize == 1:
-    #         preprocessed_operations.loc[preprocessed_operations['ФИО Клиента'] ==
-    #                                     patient, 'Приз'] = '2 покупки ПЗ'
-    #     elif prize == 2:
-    #         preprocessed_operations.loc[preprocessed_operations['ФИО Клиента'] ==
-    #                                     patient, 'Приз'] = '3 покупки любых'
-    #     elif prize == 3:
-    #         preprocessed_operations.loc[preprocessed_operations['ФИО Клиента'] ==
-    #                                     patient, 'Приз'] = '3 коробки ПЗ'
-    #     else:
-    #         preprocessed_operations.loc[preprocessed_operations['ФИО Клиента'] ==
-    #                                     patient, 'Приз'] = '5 коробки 1Д'
-    #
-    # preprocessed_operations.to_excel('output.xlsx', index=False)
+def mark_prizes_all_patients(lens_group):
+    input_file_name = lens_group + '.xls'
+    operations = read_operations(input_file_name)
+    preprocessed_operations = preprocess_operations(operations)
+    df_filled_rows = fill_empty(preprocessed_operations)
+    if type == 'МФКЛ':
+        df_filled_rows = use_mfkl_handbook(
+            'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
+            df_filled_rows)
+    df_lens_types = add_lens_type(df_filled_rows)
+    df_balls = count_balls(df_lens_types)
+    df_prizes = count_prize(df_balls)
+    preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
+                                       on='ФИО Клиента', how='left')
+    output_file_name = lens_group + '_output.xlsx'
+    preprocessed_operations.to_excel(output_file_name, index=False)
 
 
-operations = read_operations('ТКЛ.xls')
-preprocessed_operations = preprocess_operations(operations)
-df_filled_rows = fill_empty(preprocessed_operations)
-df_lens_types = lens_type(df_filled_rows)
-df_balls = count_balls(df_lens_types)
-df_prizes = count_prize(df_balls)
-preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
-                                   on='ФИО Клиента', how='left')
-
-preprocessed_operations.to_excel('output.xlsx', index=False)
-
-
-# выводить в красивый ексель полуготовый результат
-# сделать для МФКЛ
 # совместить с рецептами
 # сохранит в красивый ексель
 # сделать проверку
