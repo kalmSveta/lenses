@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+pd.set_option('future.no_silent_downcasting', True)
 pd.set_option('display.max_columns', None)
 
 
@@ -81,9 +82,12 @@ def count_balls(df):
                           df["Дата заказа"])
     df['Сумма'] = np.where(df["Сумма платежа"] == 0, df["Сумма доплаты"],
                            df["Сумма платежа"])
-    # если клиент, Линза и дата совпадают - то считаем это за 1 заказ
+    # выкидываем заказы, у которых сумма равна 0
+    order_sums = df.groupby('id заказа')['Сумма'].transform('sum')
+    df = df[order_sums != 0].copy()
+    # если клиент, линза и дата совпадают - то считаем это за 1 заказ
     # (проставить один id)
-    df['id заказа новое'] = df['id заказа']
+    df.loc[:, 'id заказа новое'] = df['id заказа']
     df["id заказа новое"] = df.groupby(["ФИО Клиента", "Линза", "Дата"])["id заказа новое"].transform("first")
     df = (
         df.groupby(["ФИО Клиента", "id заказа новое"])
@@ -155,8 +159,6 @@ def mark_prizes_all_patients(lens_group, patients):
     output_file_name = lens_group + '_output.xlsx'
     preprocessed_operations.to_excel(output_file_name, index=False)
     return df_prizes
-
-
 
 # совместить с рецептами
 # сохранит в красивый ексель
