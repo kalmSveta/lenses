@@ -45,7 +45,18 @@ def fill_empty(df):
     df = fill_empty_rows(df, 'ФИО Клиента')
     df = fill_empty_rows(df, 'id заказа')
     df = fill_empty_rows(df, 'Линза')
+    df = fill_order_date(df)
     df['id заказа'] = df['id заказа'].astype(int)
+    return df
+
+
+def fill_order_date(df):
+    # если дата заказа пустая - берем ее из других строк с таким же id заказа.
+    # если других строк с таким id нет (или у них тоже нет даты) - оставляем
+    # пустой
+    df = df.copy()
+    date_from_id = df.groupby('id заказа')['Дата заказа'].transform('first')
+    df['Дата заказа'] = df['Дата заказа'].fillna(date_from_id)
     return df
 
 
@@ -76,19 +87,27 @@ def use_mfkl_handbook(file_name: str, tab: str, df):
     return new_df
 
 
+def union_orders(df):
+    # если клиент, линза и дата заказа совпадают - то считаем это за 1 заказ
+    # (проставить один id)
+    df.loc[:, 'id заказа новое'] = df['id заказа']
+    df["id заказа новое"] = df.groupby(["ФИО Клиента", "Линза", "Дата заказа"])[
+        "id заказа новое"].transform("first")
+    df['id заказа новое'] = np.where(df["id заказа новое"].isna(), df["id заказа"],
+                           df["id заказа новое"])
+    return df
+
+
 def count_balls(df):
     # объединяем колонки
-    df['Дата'] = np.where(df["Дата заказа"].isna(), df["Дата доплаты"],
-                          df["Дата заказа"])
     df['Сумма'] = np.where(df["Сумма платежа"] == 0, df["Сумма доплаты"],
                            df["Сумма платежа"])
     # выкидываем заказы, у которых сумма равна 0
     order_sums = df.groupby('id заказа')['Сумма'].transform('sum')
     df = df[order_sums != 0].copy()
-    # если клиент, линза и дата совпадают - то считаем это за 1 заказ
-    # (проставить один id)
-    df.loc[:, 'id заказа новое'] = df['id заказа']
-    df["id заказа новое"] = df.groupby(["ФИО Клиента", "Линза", "Дата"])["id заказа новое"].transform("first")
+    # объединяем заказы
+    df = union_orders(df)
+    # подготовим сводную таблицу
     df = (
         df.groupby(["ФИО Клиента", "id заказа новое"])
         .agg({"Сумма": "sum", "Кол-во": "sum", "Тип линзы": "first"})
@@ -147,7 +166,7 @@ def mark_prizes_all_patients(lens_group, patients):
     preprocessed_operations = preprocess_operations(operations)
     df_filled_rows = fill_empty(preprocessed_operations)
     df_filled_rows = select_patients(df_filled_rows, patients)
-    if type == 'МФКЛ':
+    if lens_group == 'МФКЛ':
         df_filled_rows = use_mfkl_handbook(
             'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
             df_filled_rows)
@@ -160,6 +179,28 @@ def mark_prizes_all_patients(lens_group, patients):
     preprocessed_operations.to_excel(output_file_name, index=False)
     return df_prizes
 
+
+
+# если в 1 заказе разные названия линз, то считаем как разные заказы
+# что с мясоедовой?
+
+# lens_group = 'ТКЛ'
+# input_file_name = lens_group + '.xls'
+# operations = read_operations(input_file_name)
+# preprocessed_operations = preprocess_operations(operations)
+# df_filled_rows = fill_empty(preprocessed_operations)
+# df_filled_rows = add_lens_type(df_filled_rows)
+# df_balls = count_balls(df_filled_rows)
+# df_prizes = count_prize(df_balls)
+# preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
+#                                    on='ФИО Клиента', how='left')
+# output_file_name = lens_group + '_output.xlsx'
+# preprocessed_operations.to_excel(output_file_name, index=False)
+
+
+
+# доделать ТКЛ
+# проверить мфкл
 # совместить с рецептами
 # сохранит в красивый ексель
 # сделать проверку
