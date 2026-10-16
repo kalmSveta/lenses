@@ -109,7 +109,7 @@ def count_balls(df):
     df = union_orders(df)
     # подготовим сводную таблицу
     df = (
-        df.groupby(["ФИО Клиента", "id заказа новое"])
+        df.groupby(["ФИО Клиента", "id заказа новое", "Линза"])
         .agg({"Сумма": "sum", "Кол-во": "sum", "Тип линзы": "first"})
         .reset_index()
     )
@@ -180,26 +180,6 @@ def mark_prizes_all_patients(lens_group, patients):
     return df_prizes
 
 
-
-# если в 1 заказе разные названия линз, то считаем как разные заказы
-# что с мясоедовой?
-
-# lens_group = 'ТКЛ'
-# input_file_name = lens_group + '.xls'
-# operations = read_operations(input_file_name)
-# preprocessed_operations = preprocess_operations(operations)
-# df_filled_rows = fill_empty(preprocessed_operations)
-# df_filled_rows = add_lens_type(df_filled_rows)
-# df_balls = count_balls(df_filled_rows)
-# df_prizes = count_prize(df_balls)
-# preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
-#                                    on='ФИО Клиента', how='left')
-# output_file_name = lens_group + '_output.xlsx'
-# preprocessed_operations.to_excel(output_file_name, index=False)
-
-
-
-# доделать ТКЛ
 # проверить мфкл
 # совместить с рецептами
 # сохранит в красивый ексель
