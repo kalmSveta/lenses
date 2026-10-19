@@ -6,8 +6,6 @@ pd.set_option('display.max_columns', None)
 
 def read_operations(file_name: str):
     df = pd.read_excel(file_name, skiprows=1)
-    # # присвоим уникальный id строкам файла
-    # df['row_id'] = range(len(df))
     # переименовать столбцы
     df.rename(columns={'Unnamed: 0': 'ФИО Клиента', 'Unnamed: 2': 'id заказа',
                        'Unnamed: 3': 'Линза', 'Unnamed: 4': 'Дата заказа',
@@ -82,6 +80,9 @@ def use_mfkl_handbook(file_name: str, tab: str, df):
     handbook = pd.read_excel(file_name, sheet_name=tab)
     new_df = pd.merge(df, handbook[['Название КЛ', 'в файле МФКЛ']],
                       left_on='Линза', right_on='Название КЛ', how='left')
+    if len(new_df[new_df['в файле МФКЛ'].isna()]) > 0:
+        new_df[new_df['в файле МФКЛ'].isna()].to_excel(
+            'Не нашли Линзу в справочнике МФКЛ.xlsx', index=False)
     new_df = new_df.drop(columns=['Линза', 'Название КЛ'])
     new_df = new_df.rename(columns={'в файле МФКЛ': 'Линза'})
     return new_df
@@ -165,7 +166,7 @@ def mark_prizes_all_patients(lens_group, patients):
     operations = read_operations(input_file_name)
     preprocessed_operations = preprocess_operations(operations)
     df_filled_rows = fill_empty(preprocessed_operations)
-    df_filled_rows = select_patients(df_filled_rows, patients)
+    # df_filled_rows = select_patients(df_filled_rows, patients)
     if lens_group == 'МФКЛ':
         df_filled_rows = use_mfkl_handbook(
             'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
@@ -180,8 +181,8 @@ def mark_prizes_all_patients(lens_group, patients):
     return df_prizes
 
 
-# проверить мфкл
 # совместить с рецептами
 # сохранит в красивый ексель
 # сделать проверку
 # сохранить в красивый ексель
+# сделать установочный exe
