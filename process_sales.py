@@ -63,26 +63,30 @@ def select_patients(df, patients):
     return df
 
 
-def add_lens_type(df):
+def add_lens_type(df, lens_group):
     conditions = [
-        df['Линза'].str.contains('30', na=False),
-        df['Линза'].str.contains('3', na=False),
-        df['Линза'].str.contains('6', na=False),
-        df['Линза'].str.contains('12', na=False),
-        df['Линза'].str.contains('90', na=False)
+        df['Линза'].str.contains('30 шт', na=False),
+        df['Линза'].str.contains('3 шт', na=False),
+        df['Линза'].str.contains('6 шт', na=False),
+        df['Линза'].str.contains('12 шт', na=False),
+        df['Линза'].str.contains('90 шт', na=False)
     ]
     choices = ['1D', 'ПЗ', 'ПЗ', 'ПЗ', 'ПЗ']
     df['Тип линзы'] = np.select(conditions, choices, default=None)
+    # если не смогли определить тип линзы - выводим таких в файл
+    if len(df[df['Тип линзы'].isna()]) > 0:
+        output_file_name = lens_group + '_не_смогли_определить_тип_линз.xlsx'
+        df[df['Тип линзы'].isna()].to_excel(output_file_name, index=False)
     return df
 
 
-def use_mfkl_handbook(file_name: str, tab: str, df):
+def use_mfkl_handbook(file_name: str, tab: str, df, lens_group):
     handbook = pd.read_excel(file_name, sheet_name=tab)
     new_df = pd.merge(df, handbook[['Название КЛ', 'в файле МФКЛ']],
                       left_on='Линза', right_on='Название КЛ', how='left')
     if len(new_df[new_df['в файле МФКЛ'].isna()]) > 0:
-        new_df[new_df['в файле МФКЛ'].isna()].to_excel(
-            'Не нашли Линзу в справочнике МФКЛ.xlsx', index=False)
+        output_file_name = lens_group + '_не_нашли_линзу_в_справочнике.xlsx'
+        new_df[new_df['в файле МФКЛ'].isna()].to_excel(output_file_name, index=False)
     new_df = new_df.drop(columns=['Линза', 'Название КЛ'])
     new_df = new_df.rename(columns={'в файле МФКЛ': 'Линза'})
     return new_df
@@ -170,8 +174,8 @@ def mark_prizes_all_patients(lens_group, patients):
     if lens_group == 'МФКЛ':
         df_filled_rows = use_mfkl_handbook(
             'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
-            df_filled_rows)
-    df_filled_rows = add_lens_type(df_filled_rows)
+            df_filled_rows, lens_group)
+    df_filled_rows = add_lens_type(df_filled_rows, lens_group)
     df_balls = count_balls(df_filled_rows)
     df_prizes = count_prize(df_balls)
     preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
@@ -179,6 +183,7 @@ def mark_prizes_all_patients(lens_group, patients):
     output_file_name = lens_group + '_output.xlsx'
     preprocessed_operations.to_excel(output_file_name, index=False)
     return df_prizes
+
 
 
 # совместить с рецептами
