@@ -75,7 +75,8 @@ def add_lens_type(df, lens_group):
     df['Тип линзы'] = np.select(conditions, choices, default=None)
     # если не смогли определить тип линзы - выводим таких в файл
     if len(df[df['Тип линзы'].isna()]) > 0:
-        output_file_name = lens_group + '_не_смогли_определить_тип_линз.xlsx'
+        print('ОШИБКА: Не смог определить тип линзы')
+        output_file_name = lens_group + '_не_смог_определить_тип_линз.xlsx'
         df[df['Тип линзы'].isna()].to_excel(output_file_name, index=False)
     return df
 
@@ -85,7 +86,8 @@ def use_mfkl_handbook(file_name: str, tab: str, df, lens_group):
     new_df = pd.merge(df, handbook[['Название КЛ', 'в файле МФКЛ']],
                       left_on='Линза', right_on='Название КЛ', how='left')
     if len(new_df[new_df['в файле МФКЛ'].isna()]) > 0:
-        output_file_name = lens_group + '_не_нашли_линзу_в_справочнике.xlsx'
+        print('ОШИБКА: Не нашел линзу в справочнике')
+        output_file_name = lens_group + '_не_нашел_линзу_в_справочнике.xlsx'
         new_df[new_df['в файле МФКЛ'].isna()].to_excel(output_file_name, index=False)
     new_df = new_df.drop(columns=['Линза', 'Название КЛ'])
     new_df = new_df.rename(columns={'в файле МФКЛ': 'Линза'})
@@ -165,12 +167,12 @@ def count_prize(df):
     return df
 
 
-def mark_prizes_all_patients(lens_group, patients):
-    input_file_name = lens_group + '.xls'
+def get_patients_with_prizes(orders_file_path, lens_group, patients):
+    input_file_name = orders_file_path + '/' + lens_group + '.xls'
     operations = read_operations(input_file_name)
     preprocessed_operations = preprocess_operations(operations)
     df_filled_rows = fill_empty(preprocessed_operations)
-    # df_filled_rows = select_patients(df_filled_rows, patients)
+    df_filled_rows = select_patients(df_filled_rows, patients)
     if lens_group == 'МФКЛ':
         df_filled_rows = use_mfkl_handbook(
             'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
@@ -178,16 +180,20 @@ def mark_prizes_all_patients(lens_group, patients):
     df_filled_rows = add_lens_type(df_filled_rows, lens_group)
     df_balls = count_balls(df_filled_rows)
     df_prizes = count_prize(df_balls)
+    # сохраним файл с пометками о призах
     preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
                                        on='ФИО Клиента', how='left')
     output_file_name = lens_group + '_output.xlsx'
     preprocessed_operations.to_excel(output_file_name, index=False)
-    return df_prizes
+    # вернем пациентов с призами
+    patients_with_prizes = \
+        preprocessed_operations.loc[preprocessed_operations['Приз'] == 1,
+        'ФИО Клиента'].tolist()
+    return patients_with_prizes
 
 
 
-# совместить с рецептами
-# сохранит в красивый ексель
 # сделать проверку
 # сохранить в красивый ексель
+# подумать, что на вход и что на выход по путям до файлов
 # сделать установочный exe

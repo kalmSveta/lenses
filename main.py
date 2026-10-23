@@ -1,6 +1,5 @@
 import argparse
 from read_recepy import *
-from process_sales import *
 
 
 def parse_args():
@@ -8,22 +7,20 @@ def parse_args():
     parser = argparse.ArgumentParser()
     # 2. Добавляем аргументы
     parser.add_argument("dates", type=str,
-                        help="Период дат в формате XX.YY-XX.YY")
+                        help="Период дат в формате ДД.ММ.ГГ-ДД.ММ.ГГ")
     # 3. Читаем аргументы из командной строки
     args = parser.parse_args()
     return args
 
 
 if __name__ == '__main__':
-    recipes_tkl = prepare_recipes(tab='ТКЛ-рецепты оплаченые',
-                                  date_str=parse_args().dates)
-    print(recipes_tkl[['ФИО Клиента', 'Дата рецепта']].head())
-    prizes_tkl = mark_prizes_all_patients(lens_group='ТКЛ',
-                                          patients=recipes_tkl['ФИО Клиента'])
+    # ПОЛУЧАЕМ ДАТЫ
+    start_date, end_date = parse_date_range(parse_args().dates)
 
+    # СНАЧАЛА ОБРАБОТАЕМ ТКЛ
+    process_prescriptions(lens_group='ТКЛ', start_date=start_date,
+                          end_date=end_date)
 
-    recipes_mfkl = prepare_recipes(tab='МФКЛ-рецепты оплаченые',
-                                   date_str=parse_args().dates)
-    prizes_mfkl = mark_prizes_all_patients(lens_group='МФКЛ',
-                                          patients=recipes_mfkl['ФИО Клиента'])
-    print(recipes_mfkl[['ФИО Клиента', 'Дата рецепта']].head())
+    # ПОТОМ ОБРАБОТАЕМ МФКЛ
+    process_prescriptions(lens_group='МФКЛ', start_date=start_date,
+                          end_date=end_date)
