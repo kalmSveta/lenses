@@ -65,7 +65,7 @@ def select_patients(df, patients):
     return df
 
 
-def add_lens_type(df, lens_group):
+def add_lens_type(df, lens_group, output_file_path):
     conditions = [
         df['Линза'].str.contains('30 шт', na=False),
         df['Линза'].str.contains('3 шт', na=False),
@@ -78,19 +78,25 @@ def add_lens_type(df, lens_group):
     # если не смогли определить тип линзы - выводим таких в файл
     if len(df[df['Тип линзы'].isna()]) > 0:
         print('ОШИБКА: Не смог определить тип линзы')
-        output_file_name = lens_group + '_не_смог_определить_тип_линз.xlsx'
+        os.makedirs(output_file_path, exist_ok=True)
+        output_file_name = output_file_path + '\\' + lens_group + \
+                           '_не_смог_определить_тип_линз.xlsx'
         df[df['Тип линзы'].isna()].to_excel(output_file_name, index=False)
     return df
 
 
-def use_mfkl_handbook(file_name: str, tab: str, df, lens_group):
+def use_mfkl_handbook(file_name: str, tab: str, df, lens_group,
+                      output_file_path):
     handbook = pd.read_excel(file_name, sheet_name=tab)
     new_df = pd.merge(df, handbook[['Название КЛ', 'в файле МФКЛ']],
                       left_on='Линза', right_on='Название КЛ', how='left')
     if len(new_df[new_df['в файле МФКЛ'].isna()]) > 0:
         print('ОШИБКА: Не нашел линзу в справочнике')
-        output_file_name = lens_group + '_не_нашел_линзу_в_справочнике.xlsx'
-        new_df[new_df['в файле МФКЛ'].isna()].to_excel(output_file_name, index=False)
+        os.makedirs(output_file_path, exist_ok=True)
+        output_file_name = output_file_path + '\\' + lens_group + \
+                           '_не_нашел_линзу_в_справочнике.xlsx'
+        new_df[new_df['в файле МФКЛ'].isna()].to_excel(output_file_name,
+                                                       index=False)
     new_df = new_df.drop(columns=['Линза', 'Название КЛ'])
     new_df = new_df.rename(columns={'в файле МФКЛ': 'Линза'})
     return new_df
@@ -192,8 +198,9 @@ def get_patients_with_prizes(orders_file_path, handbook_file_path, lens_group,
         df_with_patients_paid = use_mfkl_handbook(input_file_name,
                                                   'Справочник по МФКЛ',
                                                   df_with_patients_paid,
-                                                  lens_group)
-    df_with_patients_paid = add_lens_type(df_with_patients_paid, lens_group)
+                                                  lens_group, output_file_path)
+    df_with_patients_paid = add_lens_type(df_with_patients_paid, lens_group,
+                                          output_file_path)
     df_balls = count_balls(df_with_patients_paid)
     df_prizes = count_prize(df_balls)
     # найдем, каких пациентов мы забыли и считаем неоплаченные, хотя они платили

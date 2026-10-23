@@ -49,14 +49,16 @@ def save_prescriptions_with_bonus(prescriptions, start_date, end_date,
     return 0
 
 
-def get_patients_not_paid(lens_group):
-    prescriptions_paid = read_prescriptions(prescription_file_path='ексели',
-                                            lens_group=lens_group,
-                                            paid=True)
+def get_patients_not_paid(prescription_file_path, lens_group):
+    prescriptions_paid = \
+        read_prescriptions(prescription_file_path=prescription_file_path,
+                           lens_group=lens_group,
+                           paid=True)
     patients_paid = set(prescriptions_paid['ФИО Клиента'])
-    prescriptions_all = read_prescriptions(prescription_file_path='ексели',
-                                           lens_group=lens_group,
-                                           paid=False)
+    prescriptions_all = \
+        read_prescriptions(prescription_file_path=prescription_file_path,
+                           lens_group=lens_group,
+                           paid=False)
     patients_all = set(prescriptions_all['ФИО Клиента'])
     patients_not_paid = patients_all - patients_paid
     return patients_not_paid
@@ -74,7 +76,8 @@ def process_prescriptions(orders_file_path, prescription_file_path,
     patients_paid = get_patients_with_orders_in_date_range(
         prescriptions=prescriptions, start_date=start_date, end_date=end_date)
     print('Уникальных пациентов с рецептами за нужные даты: '+str(len(patients_paid)))
-    patients_not_paid = get_patients_not_paid(lens_group)
+    patients_not_paid = get_patients_not_paid(prescription_file_path,
+                                              lens_group)
     patients_with_prizes = \
         get_patients_with_prizes(orders_file_path=orders_file_path,
                                  handbook_file_path=handbook_file_path,
