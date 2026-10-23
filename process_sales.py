@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import os
+
 pd.set_option('future.no_silent_downcasting', True)
 pd.set_option('display.max_columns', None)
 
@@ -100,8 +102,8 @@ def union_orders(df):
     df.loc[:, 'id заказа новое'] = df['id заказа']
     df["id заказа новое"] = df.groupby(["ФИО Клиента", "Линза", "Дата заказа"])[
         "id заказа новое"].transform("first")
-    df['id заказа новое'] = np.where(df["id заказа новое"].isna(), df["id заказа"],
-                           df["id заказа новое"])
+    df['id заказа новое'] = np.where(df["id заказа новое"].isna(),
+                                     df["id заказа"], df["id заказа новое"])
     return df
 
 
@@ -175,22 +177,28 @@ def get_patients_with_payment(df):
     return patients_really_paid
 
 
-def get_patients_with_prizes(orders_file_path, lens_group, patients_paid, patients_not_paid):
-    input_file_name = orders_file_path + '/' + lens_group + '.xls'
+def get_patients_with_prizes(orders_file_path, handbook_file_path, lens_group,
+                             patients_paid, patients_not_paid,
+                             output_file_path):
+    input_file_name = orders_file_path + '\\' + lens_group + '.xls'
     operations = read_operations(input_file_name)
     operations = preprocess_operations(operations)
     df_filled_rows = fill_empty(operations)
     # найдем, за каких пациентов положены призы
     df_with_patients_paid = select_patients(df_filled_rows, patients_paid)
     if lens_group == 'МФКЛ':
-        df_with_patients_paid = use_mfkl_handbook(
-            'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
-            df_with_patients_paid, lens_group)
+        input_file_name = handbook_file_path + '\\' + \
+                          'Справочник по контактным линзам.xlsx'
+        df_with_patients_paid = use_mfkl_handbook(input_file_name,
+                                                  'Справочник по МФКЛ',
+                                                  df_with_patients_paid,
+                                                  lens_group)
     df_with_patients_paid = add_lens_type(df_with_patients_paid, lens_group)
     df_balls = count_balls(df_with_patients_paid)
     df_prizes = count_prize(df_balls)
     # найдем, каких пациентов мы забыли и считаем неоплаченные, хотя они платили
-    df_with_patients_not_paid = select_patients(df_filled_rows, patients_not_paid)
+    df_with_patients_not_paid = select_patients(df_filled_rows,
+                                                patients_not_paid)
     patients_really_paid = get_patients_with_payment(df_with_patients_not_paid)
     # сохраним файл с пометками о призах и "забытых" пациентах
     operations = pd.merge(operations, df_prizes, on='ФИО Клиента', how='left')
@@ -199,13 +207,14 @@ def get_patients_with_prizes(orders_file_path, lens_group, patients_paid, patien
             len(patients_really_paid)))
         operations['Проверка'] = None
         operations.loc[
-            operations['ФИО Клиента'].isin(patients_really_paid), 'Проверка'] = '%%%%%'
-    output_file_name = lens_group + '_output.xlsx'
+            operations['ФИО Клиента'].isin(patients_really_paid),
+            'Проверка'] = '%%%%%'
+    os.makedirs(output_file_path, exist_ok=True)
+    output_file_name = output_file_path + '\\' + lens_group + '_output.xlsx'
     operations.to_excel(output_file_name, index=False)
     # вернем пациентов с призами
     patients_with_prizes = operations.loc[operations['Приз'] == 1, 'ФИО Клиента'].tolist()
     return patients_with_prizes
 
 
-# подумать, что на вход и что на выход по путям до файлов
 # сделать установочный exe
