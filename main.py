@@ -22,5 +22,5 @@ if __name__ == '__main__':
                           end_date=end_date)
 
     # ПОТОМ ОБРАБОТАЕМ МФКЛ
-    process_prescriptions(lens_group='МФКЛ', start_date=start_date,
-                          end_date=end_date)
+    # process_prescriptions(lens_group='МФКЛ', start_date=start_date,
+    #                       end_date=end_date)

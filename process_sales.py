@@ -59,7 +59,7 @@ def fill_order_date(df):
 
 
 def select_patients(df, patients):
-    df = df[df['ФИО Клиента'].isin(patients)]
+    df = df[df['ФИО Клиента'].isin(patients)].copy()
     return df
 
 
@@ -167,33 +167,45 @@ def count_prize(df):
     return df
 
 
-def get_patients_with_prizes(orders_file_path, lens_group, patients):
+def get_patients_with_payment(df):
+    df['Сумма'] = df['Сумма платежа'] + df['Сумма доплаты']
+    patient_sums = df.groupby('ФИО Клиента', as_index=False)['Сумма'].sum()
+    patients_really_paid = set(
+        patient_sums.loc[patient_sums['Сумма'] > 0, 'ФИО Клиента'])
+    return patients_really_paid
+
+
+def get_patients_with_prizes(orders_file_path, lens_group, patients_paid, patients_not_paid):
     input_file_name = orders_file_path + '/' + lens_group + '.xls'
     operations = read_operations(input_file_name)
-    preprocessed_operations = preprocess_operations(operations)
-    df_filled_rows = fill_empty(preprocessed_operations)
-    df_filled_rows = select_patients(df_filled_rows, patients)
+    operations = preprocess_operations(operations)
+    df_filled_rows = fill_empty(operations)
+    # найдем, за каких пациентов положены призы
+    df_with_patients_paid = select_patients(df_filled_rows, patients_paid)
     if lens_group == 'МФКЛ':
-        df_filled_rows = use_mfkl_handbook(
+        df_with_patients_paid = use_mfkl_handbook(
             'Справочник по контактным линзам.xlsx', 'Справочник по МФКЛ',
-            df_filled_rows, lens_group)
-    df_filled_rows = add_lens_type(df_filled_rows, lens_group)
-    df_balls = count_balls(df_filled_rows)
+            df_with_patients_paid, lens_group)
+    df_with_patients_paid = add_lens_type(df_with_patients_paid, lens_group)
+    df_balls = count_balls(df_with_patients_paid)
     df_prizes = count_prize(df_balls)
-    # сохраним файл с пометками о призах
-    preprocessed_operations = pd.merge(preprocessed_operations, df_prizes,
-                                       on='ФИО Клиента', how='left')
+    # найдем, каких пациентов мы забыли и считаем неоплаченные, хотя они платили
+    df_with_patients_not_paid = select_patients(df_filled_rows, patients_not_paid)
+    patients_really_paid = get_patients_with_payment(df_with_patients_not_paid)
+    # сохраним файл с пометками о призах и "забытых" пациентах
+    operations = pd.merge(operations, df_prizes, on='ФИО Клиента', how='left')
+    if len(patients_really_paid) > 0:
+        print('ВНИМАНИЕ! Есть пропущенные пациенты с оплатой: ' + str(
+            len(patients_really_paid)))
+        operations['Проверка'] = None
+        operations.loc[
+            operations['ФИО Клиента'].isin(patients_really_paid), 'Проверка'] = '%%%%%'
     output_file_name = lens_group + '_output.xlsx'
-    preprocessed_operations.to_excel(output_file_name, index=False)
+    operations.to_excel(output_file_name, index=False)
     # вернем пациентов с призами
-    patients_with_prizes = \
-        preprocessed_operations.loc[preprocessed_operations['Приз'] == 1,
-        'ФИО Клиента'].tolist()
+    patients_with_prizes = operations.loc[operations['Приз'] == 1, 'ФИО Клиента'].tolist()
     return patients_with_prizes
 
 
-
-# сделать проверку
-# сохранить в красивый ексель
 # подумать, что на вход и что на выход по путям до файлов
 # сделать установочный exe
