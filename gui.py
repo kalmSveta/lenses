@@ -71,8 +71,8 @@ def validate_input_length(proposed_text):
     if len(proposed_text) > 100:
         messagebox.showwarning("Ошибка ввода",
                                "Максимальная длина поля не может превышать 100 символов!")
-        return False  # Запретить ввод
-    return True  # Разрешить ввод
+        return False
+    return True
 
 
 def clear_entry(entry_widget):
@@ -116,6 +116,29 @@ def start_processing():
             "Ошибка", "Пожалуйста, заполните все поля и выберите папки!"
         )
         return
+
+    # --- ПРОВЕРКА НАЛИЧИЯ ОБЯЗАТЕЛЬНЫХ ФАЙЛОВ ---
+    required_files = [
+        "РЕЦЕПТЫ.xlsx",
+        "ТКЛ.xls",
+        "МФКЛ.xls",
+        "Справочник по контактным линзам.xlsx"
+    ]
+
+    missing_files = []
+    for file_name in required_files:
+        full_path = os.path.join(input_folder, file_name)
+        if not os.path.exists(full_path):
+            missing_files.append(file_name)
+
+    if missing_files:
+        error_msg = "В указанной входной папке не найдены следующие обязательные файлы:\n\n"
+        for file in missing_files:
+            error_msg += f"• {file}\n"
+        error_msg += "\nПожалуйста, добавьте их в папку и повторите попытку."
+        messagebox.showerror("Ошибка: Файлы не найдены", error_msg)
+        return
+    # ---------------------------------------------
 
     log_text.delete("1.0", tk.END)
 
@@ -165,8 +188,6 @@ style = ttk.Style()
 style.theme_use("vista")
 style.configure("Clear.TButton", font=("Arial", 10, "bold"), width=2, padding=0)
 
-# Регистрируем функцию валидации в контексте Tkinter
-# %P означает "значение поля после предполагаемого изменения"
 vcmd = (root.register(validate_input_length), '%P')
 
 main_frame = ttk.Frame(root, padding="15")
